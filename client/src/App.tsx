@@ -1,42 +1,33 @@
-import React, { Component } from 'react'
+import React, { Component, useState } from 'react'
 import { Link, Route, Router, Switch } from 'react-router-dom'
-import { Grid, Menu, Segment } from 'semantic-ui-react'
-
+import { Grid, Button, Menu, Segment, Header, Image } from 'semantic-ui-react'
+import logo from './skillshare-thumbnail.png'
 import Auth from './auth/Auth'
-import { EditTodo } from './components/EditTodo'
-import { LogIn } from './components/LogIn'
 import { NotFound } from './components/NotFound'
-import { Todos } from './components/Todos'
-
-export interface AppProps {}
+import { RegistrationForm } from './components/RegistrationForm'
+import { LandingPageSuccess } from './components/LandingPageSuccess'
 
 export interface AppProps {
   auth: Auth
   history: any
+  workshopsSelected: string[]
+  workshopsChosen: {
+    workshopId: string
+    workshopName: string
+    workshopPrice: number
+    workshopStart: string
+    workshopEnd: string
+  }[]
+  emailAddress: string
 }
 
 export interface AppState {}
 
 export default class App extends Component<AppProps, AppState> {
-  constructor(props: AppProps) {
-    super(props)
-
-    this.handleLogin = this.handleLogin.bind(this)
-    this.handleLogout = this.handleLogout.bind(this)
-  }
-
-  handleLogin() {
-    this.props.auth.login()
-  }
-
-  handleLogout() {
-    this.props.auth.logout()
-  }
-
   render() {
     return (
       <div>
-        <Segment style={{ padding: '8em 0em' }} vertical>
+        <Segment style={{ padding: '4em 0em' }} vertical>
           <Grid container stackable verticalAlign="middle">
             <Grid.Row>
               <Grid.Column width={16}>
@@ -55,55 +46,41 @@ export default class App extends Component<AppProps, AppState> {
 
   generateMenu() {
     return (
-      <Menu>
-        <Menu.Item name="home">
-          <Link to="/">Home</Link>
-        </Menu.Item>
-
-        <Menu.Menu position="right">{this.logInLogOutButton()}</Menu.Menu>
-      </Menu>
+      <div>
+        <Header as="h2" textAlign="center">
+          Fast Flash Workshops Lottery
+        </Header>
+        <Image src={logo} centered size="large" />
+      </div>
     )
   }
 
-  logInLogOutButton() {
-    if (this.props.auth.isAuthenticated()) {
-      return (
-        <Menu.Item name="logout" onClick={this.handleLogout}>
-          Log Out
-        </Menu.Item>
-      )
-    } else {
-      return (
-        <Menu.Item name="login" onClick={this.handleLogin}>
-          Log In
-        </Menu.Item>
-      )
-    }
-  }
-
   generateCurrentPage() {
-    if (!this.props.auth.isAuthenticated()) {
-      return <LogIn auth={this.props.auth} />
-    }
-
     return (
       <Switch>
         <Route
           path="/"
           exact
-          render={props => {
-            return <Todos {...props} auth={this.props.auth} />
+          render={(props) => {
+            return (
+              <RegistrationForm
+                {...props}
+                auth={this.props.auth}
+                workshopsSelected={this.props.workshopsSelected}
+                workshopsChosen={this.props.workshopsChosen}
+                emailAddress={this.props.emailAddress}
+              />
+            )
           }}
         />
 
         <Route
-          path="/todos/:todoId/edit"
+          path="/LandingPageSuccess"
           exact
-          render={props => {
-            return <EditTodo {...props} auth={this.props.auth} />
+          render={(props) => {
+            return <LandingPageSuccess props={props} />
           }}
         />
-
         <Route component={NotFound} />
       </Switch>
     )

@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "registrant",
+  "type": "object",
+  "properties": {
+    "firstName": {
+      "type": "string",
+      "minLength": 3
+    },
+    "lastName": {
+      "type": "string",
+      "minLength": 2
+    },
+    "emailAddress": {
+      "type": "string",
+      "minLength": 8
+    },
+    "phoneNumber": {
+      "type": "string"
+    },
+    "createdAt": {
+      "type": "string",
+      "minLength": 10
+    }
+  },
+  "required": ["firstName", "lastName", "emailAddress"],
+  "additionalProperties": false
+}

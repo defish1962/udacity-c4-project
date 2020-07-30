@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "workshop",
+  "type": "object",
+  "properties": {
+    "workshopName": {
+      "type": "string"
+    },
+    "workshopType": {
+      "type": "string"
+    },
+    "workshopPrice": {
+      "type": "number"
+    },
+    "workshopStart": {
+      "type": "string"
+    },
+    "workshopEnd": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "workshopName",
+    "workshopType",
+    "workshopPrice",
+    "workshopStart",
+    "workshopEnd"
+  ],
+  "additionalProperties": false
+}

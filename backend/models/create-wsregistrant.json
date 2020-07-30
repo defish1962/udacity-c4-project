@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "wsRegistrant",
+  "type": "object",
+  "properties": {
+    "workshopId": {
+      "type": "string"
+    },
+    "emailAddress": {
+      "type": "string",
+      "minLength": 8
+    },
+    "paid": {
+      "type": "string"
+    },
+    "selected": {
+      "type": "string"
+    },
+    "waitlisted": {
+      "type": "string"
+    },
+    "createdAt": {
+      "type": "string",
+      "minLength": 10
+    }
+  },
+  "required": ["workshopId", "emailAddress", "paid", "selected", "waitlisted"],
+  "additionalProperties": false
+}

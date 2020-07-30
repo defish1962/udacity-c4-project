@@ -1,5 +1,5 @@
 service:
-  name: serverless-todo-app
+  name: workshop-lottery-app
 
 plugins:
   - serverless-webpack
@@ -24,8 +24,9 @@ provider:
     apiGateway: true
 
   environment:
-    TODOS_TABLE: Todos-${self:provider.stage}
-    TODOS_S3_BUCKET: serverless-todos-zxin${self:provider.stage}
+    WORKSHOPS_TABLE: FFWorkshops-${self:provider.stage}
+    WS_REGISTRANTS_TABLE: FFWSReg-${self:provider.stage}
+    REGISTRANTS_TABLE: FFReg-${self:provider.stage}
     SIGNED_URL_EXPIRATION: 300
     JWKS_URL: https://dev-5-kp86z1.auth0.com/.well-known/jwks.json
 
@@ -34,37 +35,39 @@ custom:
     api:
       info:
         version: v1.0.0
-        title: Todos API
-        description: Serverless application for todos
+        title: Registrant API
+        description: Serverless application for lottery registrations
     models:
-      - name: CreateTodoRequest
+      - name: CreateRegistrantRequest
         contentType: application/json
-        schema: ${file(models/create-todo-request.json)}
-      - name: UpdateTodoRequest
+        schema: ${file(models/create-registrant.json)}
+      - name: CreateWorkshopRequest
         contentType: application/json
-        schema: ${file(models/update-todo-request.json)}
+        schema: ${file(models/create-workshop.json)}
+      - name: CreateWSRegistrantRequest
+        contentType: application/json
+        schema: ${file(models/create-wsregistrant.json)}
 
 functions:
   Auth:
     handler: src/lambda/auth/auth0Authorizer.handler
 
-  # TODO: Configure this function
-  GetTodos:
-    handler: src/lambda/http/getTodos.handler
+  GetRegistrants:
+    handler: src/lambda/http/getRegistrants.handler
     events:
       - http:
           method: get
-          path: todos
+          path: registrants
           cors: true
           authorizer: Auth
           documentation:
-            summary: Get all todos for a user
-            description: Get all todos for a user
+            summary: Get all registrants
+            description: Get all lottery registrants
     iamRoleStatements:
       - Effect: Allow
         Action:
-          - dynamodb:Query
-        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
+          - dynamodb:Scan
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.REGISTRANTS_TABLE}
       - Effect: Allow
         Action:
           - codedeploy:*
@@ -74,56 +77,21 @@ functions:
       type: Linear10PercentEvery1Minute
       alias: Live
 
-  # TODO: Configure this function
-  CreateTodo:
-    handler: src/lambda/http/createTodo.handler
+  GetRegistrant:
+    handler: src/lambda/http/getRegistrant.handler
     events:
       - http:
-          method: post
-          path: todos
+          method: get
+          path: registrants/{emailAddress}
           cors: true
-          authorizer: Auth
-          reqValidatorName: RequestBodyValidator
           documentation:
-            summary: Create a todo
-            description: Create a new todo
-            requestModels:
-              'application/json': CreateTodoRequest
-    iamRoleStatements:
-      - Effect: Allow
-        Action:
-          - dynamodb:PutItem
-        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
-      - Effect: Allow
-        Action:
-          - codedeploy:*
-        Resource:
-          - '*'
-    deploymentSettings:
-      type: Linear10PercentEvery1Minute
-      alias: Live
-
-  # TODO: Configure this function
-  UpdateTodo:
-    handler: src/lambda/http/updateTodo.handler
-    events:
-      - http:
-          method: patch
-          path: todos/{todoId}
-          cors: true
-          authorizer: Auth
-          reqValidatorName: RequestBodyValidator
-          documentation:
-            summary: Update a todo
-            description: Update a todo
-            requestModels:
-              'application/json': UpdateTodoRequest
+            summary: Get a registrant by email address
+            description: Get a lottery registrant
     iamRoleStatements:
       - Effect: Allow
         Action:
           - dynamodb:GetItem
-          - dynamodb:UpdateItem
-        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.REGISTRANTS_TABLE}
       - Effect: Allow
         Action:
           - codedeploy:*
@@ -133,56 +101,206 @@ functions:
       type: Linear10PercentEvery1Minute
       alias: Live
 
-  # TODO: Configure this function
-  DeleteTodo:
-    handler: src/lambda/http/deleteTodo.handler
+  GetWSRegistrants:
+    handler: src/lambda/http/getWSRegistrants.handler
+    events:
+      - http:
+          method: get
+          path: wsRegistrants/{workshopId}
+          cors: true
+          #authorizer: Auth
+          documentation:
+            summary: Get all workshop registrants for a selected workshop
+            description: Get all lottery registrants for a selected workshop
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          # - dynamodb:Query
+          - dynamodb:Scan
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.WS_REGISTRANTS_TABLE}
+      - Effect: Allow
+        Action:
+          - codedeploy:*
+        Resource:
+          - '*'
+    deploymentSettings:
+      type: Linear10PercentEvery1Minute
+      alias: Live
+
+  # GetWSRegistrant:
+  #   handler: src/lambda/http/getWSRegistrant.handler
+  #   events:
+  #     - http:
+  #         method: get
+  #         path: wsRegistrants/{emailAddress}
+  #         cors: true
+  #         documentation:
+  #           summary: Get workshops for a registrant
+  #           description: Get workshops selected by registrant
+  #   iamRoleStatements:
+  #     - Effect: Allow
+  #       Action:
+  #         - dynamodb:GetItem
+  #       Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.WS_REGISTRANTS_TABLE}
+  #     - Effect: Allow
+  #       Action:
+  #         - codedeploy:*
+  #       Resource:
+  #         - '*'
+  #   deploymentSettings:
+  #     type: Linear10PercentEvery1Minute
+  #     alias: Live
+
+  SendEmail:
+    handler: src/lambda/http/sendEmail.handler
+    events:
+      - http:
+          method: post
+          path: nodemailer
+          cors: true
+          documentation:
+            summary: send an email to the registrant
+            description: sends an email to the registrant confirming enrollment
+    deploymentSettings:
+      type: Linear10PercentEvery1Minute
+      alias: Live
+    iamRoleStatements:
+      - Effect: 'Allow'
+        Action:
+          - 'ses:SendEmail'
+        Resource:
+          - '*'
+        Condition:
+          StringEquals:
+            ses:FromAddress:
+              - 'workshops@kathy-fish.com'
+
+  CreateWSRegistrant:
+    handler: src/lambda/http/createWSRegistrant.handler
+    events:
+      - http:
+          method: post
+          path: wsRegistrants
+          cors: true
+          #authorizer: Auth
+          reqValidatorName: RequestBodyValidator
+          documentation:
+            summary: Create a workshop registrant
+            description: Create a new workshop registrant
+            requestModels:
+              'application/json': CreateWSRegistrantRequest
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.WS_REGISTRANTS_TABLE}
+      - Effect: Allow
+        Action:
+          - codedeploy:*
+        Resource:
+          - '*'
+    deploymentSettings:
+      type: Linear10PercentEvery1Minute
+      alias: Live
+
+  CreateRegistrant:
+    handler: src/lambda/http/createRegistrant.handler
+    events:
+      - http:
+          method: post
+          path: registrants
+          cors: true
+          #authorizer: Auth
+          reqValidatorName: RequestBodyValidator
+          documentation:
+            summary: Create a registrant
+            description: Create a new registrant
+            requestModels:
+              'application/json': CreateRegistrantRequest
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.REGISTRANTS_TABLE}
+      - Effect: Allow
+        Action:
+          - codedeploy:*
+        Resource:
+          - '*'
+    deploymentSettings:
+      type: Linear10PercentEvery1Minute
+      alias: Live
+
+  GetWorkshops:
+    handler: src/lambda/http/getWorkshops.handler
+    events:
+      - http:
+          method: get
+          path: workshops
+          cors: true
+          #authorizer: Auth
+          documentation:
+            summary: Get all workshops
+            description: Get all workshops
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Scan
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.WORKSHOPS_TABLE}
+      - Effect: Allow
+        Action:
+          - codedeploy:*
+        Resource:
+          - '*'
+    deploymentSettings:
+      type: Linear10PercentEvery1Minute
+      alias: Live
+
+  CreateWorkshop:
+    handler: src/lambda/http/createWorkshop.handler
+    events:
+      - http:
+          method: post
+          path: workshops
+          cors: true
+          authorizer: Auth
+          reqValidatorName: RequestBodyValidator
+          documentation:
+            summary: Create a workshop
+            description: Create a new workshop
+            requestModels:
+              'application/json': CreateWorkshopRequest
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.WORKSHOPS_TABLE}
+      - Effect: Allow
+        Action:
+          - codedeploy:*
+        Resource:
+          - '*'
+    deploymentSettings:
+      type: Linear10PercentEvery1Minute
+      alias: Live
+
+  DeleteWorkshop:
+    handler: src/lambda/http/deleteWorkshop.handler
     events:
       - http:
           method: delete
-          path: todos/{todoId}
+          path: workshops/{workshopId}
           cors: true
           authorizer: Auth
           documentation:
-            summary: Delete a todo
-            description: Delete a todo
+            summary: Delete a workshop
+            description: Delete a workshop
     iamRoleStatements:
       - Effect: Allow
         Action:
           - dynamodb:GetItem
           - dynamodb:DeleteItem
-        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
-      - Effect: Allow
-        Action:
-          - codedeploy:*
-        Resource:
-          - '*'
-    deploymentSettings:
-      type: Linear10PercentEvery1Minute
-      alias: Live
-
-  # TODO: Configure this function
-  GenerateUploadUrl:
-    handler: src/lambda/http/generateUploadUrl.handler
-    events:
-      - http:
-          method: post
-          path: todos/{todoId}/attachment
-          cors: true
-          authorizer: Auth
-          documentation:
-            summary: Generate upload url for the todo attachment
-            description: Generate upload url for the todo attachment
-    iamRoleStatements:
-      - Effect: Allow
-        Action:
-          - dynamodb:GetItem
-          - dynamodb:UpdateItem
-        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
-      - Effect: Allow
-        Action:
-          - s3:PutObject
-          - s3:GetObject
-        Resource: arn:aws:s3:::${self:provider.environment.TODOS_S3_BUCKET}/*
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.WORKSHOPS_TABLE}
       - Effect: Allow
         Action:
           - codedeploy:*
@@ -194,7 +312,6 @@ functions:
 
 resources:
   Resources:
-    # TODO: Add any necessary AWS resources
     GatewayResponseDefault4XX:
       Type: AWS::ApiGateway::GatewayResponse
       Properties:
@@ -206,53 +323,49 @@ resources:
         RestApiId:
           Ref: ApiGatewayRestApi
 
-    TodosTable:
+    WSRegistrantsTable:
       Type: 'AWS::DynamoDB::Table'
       Properties:
         AttributeDefinitions:
-          - AttributeName: userId
+          - AttributeName: workshopId
             AttributeType: S
-          - AttributeName: todoId
+          - AttributeName: emailAddress
             AttributeType: S
         KeySchema:
-          - AttributeName: userId
+          - AttributeName: workshopId
             KeyType: HASH
-          - AttributeName: todoId
+          - AttributeName: emailAddress
             KeyType: RANGE
         BillingMode: PAY_PER_REQUEST
-        TableName: ${self:provider.environment.TODOS_TABLE}
+        TableName: ${self:provider.environment.WS_REGISTRANTS_TABLE}
 
-    AttachmentsBucket:
-      Type: AWS::S3::Bucket
+    WorkshopsTable:
+      Type: 'AWS::DynamoDB::Table'
       Properties:
-        BucketName: ${self:provider.environment.TODOS_S3_BUCKET}
-        CorsConfiguration:
-          CorsRules:
-            - AllowedOrigins:
-                - '*'
-              AllowedHeaders:
-                - '*'
-              AllowedMethods:
-                - GET
-                - PUT
-                - POST
-                - DELETE
-                - HEAD
-              MaxAge: 3000
+        AttributeDefinitions:
+          - AttributeName: workshopId
+            AttributeType: S
+          - AttributeName: workshopStart
+            AttributeType: S
+        KeySchema:
+          - AttributeName: workshopId
+            KeyType: HASH
+          - AttributeName: workshopStart
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:provider.environment.WORKSHOPS_TABLE}
 
-    BucketPolicy:
-      Type: AWS::S3::BucketPolicy
+    RegistrantsTable:
+      Type: 'AWS::DynamoDB::Table'
       Properties:
-        PolicyDocument:
-          Id: MyPolicy
-          Version: '2012-10-17'
-          Statement:
-            - Sid: PublicReadForGetBucketObjects
-              Effect: Allow
-              Principal: '*'
-              Action: 's3:GetObject'
-              Resource: 'arn:aws:s3:::${self:provider.environment.TODOS_S3_BUCKET}/*'
-        Bucket: !Ref AttachmentsBucket
+        AttributeDefinitions:
+          - AttributeName: emailAddress
+            AttributeType: S
+        KeySchema:
+          - AttributeName: emailAddress
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:provider.environment.REGISTRANTS_TABLE}
 
     RequestBodyValidator:
       Type: AWS::ApiGateway::RequestValidator
